@@ -12,10 +12,5 @@
 
 ## use it
 
-* create a time tracking text file in the same format as example_times.txt
-* `ttime.py FILE_NAME to view the working summary`
-
-
-
-
-
+* create a time tracking text file with the same format as example_times.txt
+* run `ttime.py FILE_NAME` to see a working summary
