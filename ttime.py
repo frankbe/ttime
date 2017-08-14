@@ -1,4 +1,4 @@
-#!/bin/python
+#!/usr/bin/env python3
 import re
 import datetime
 import fileinput
@@ -28,22 +28,18 @@ texts = {
 }[get_language()]
 
 
-class Period:
-    def __init__(self, start_hour, start_minute, end_hour, end_minute):
+class WorkPeriod:
+    def __init__(self, start_hour, start_minute, end_hour, end_minute, description):
         self.start_hour = int(start_hour)
         self.start_minute = int(start_minute)
         self.end_hour = int(end_hour)
         self.end_minute = int(end_minute)
+        self.description = description
+        self.minutes = (self.end_hour * 60 + self.end_minute) - (self.start_hour * 60 + self.start_minute)
+        self.hours = self.minutes() / 60
     def __repr__(self):
-        return "Period({})".format(self.range_str())
-    def range_str(self):
-        return "{}:{}-{}:{}".format(self.start_hour, self.start_minute, self.end_hour, self.end_minute)
-    def minutes(self):
-        sm = (self.start_hour * 60 + self.start_minute)
-        em = (self.end_hour * 60 + self.end_minute)
-        return em - sm
-    def hours(self):
-        return self.minutes() / 60
+        range_str = "{}:{}-{}:{}".format(self.start_hour, self.start_minute, self.end_hour, self.end_minute)
+        return "Period({})".format(range_str)
 
 
 class WorkDay:
@@ -53,16 +49,14 @@ class WorkDay:
         self.day = int(day)
         self.date = datetime.date(year, month, day)
         self.periods = periods
+        (_, self.week, self.weekday) = self.date.isocalendar()
+        self.day_no = self.date.strftime('%d')
+        self.week_no = self.date.strftime('%w')
+        self.descriptions = " * ".join([p.description for p in periods])
+        self.minutes = sum([p.minutes() for p in self.periods])
+        self.hours = self.minutes / 60
     def __eq__(self, other):
         return self.date == other.date
-    def day_no(self):
-        return date.strftime('%d')
-    def week_no(self):
-        return date.strftime('%w')
-    def minutes(self):
-        return sum([p.minutes() for p in periods])
-    def hours(self):
-        return self.minutes / 60
 
 
 def read_workdays(file_input = fileinput.input()):
@@ -74,12 +68,12 @@ def read_workdays(file_input = fileinput.input()):
     month = None
     items =[]
     for line in file_input:
-        # Monat & Jahr Definition, z.B. '[08/2015]'
+        # month & jear definition, e.g. '[08/2015]'
         match = re.search(month_year_pattern, line)
         if match:
             (month, year) = [int(x) for x in match.groups()]
             continue
-        # Logeintrag, z.B. '21. 0930-1230 T&I-Zugriffsproblem, Liste'
+        # log entry, e.g. '21. 0930-1230 T&I-Zugriffsproblem, Liste'
         match = re.search(log_work_pattern, line)
         if match:
             if not (month and year):
@@ -88,13 +82,10 @@ def read_workdays(file_input = fileinput.input()):
             day = int(day[:2]) if day else last_day
             if not day:
                 raise bad_format_err
-            date = datetime.date(year, month, day)
-            period = Period(start_time[:2], start_time[2:], end_time[:2], end_time[2:])
+            period = WorkPeriod(start_time[:2], start_time[2:], end_time[:2], end_time[2:], description)
             # sys.stdout.write(day, period.hours(), description)
-            item = items.pop() if day == last_day else (date, [], [])
-            (_, periods, descriptions) = item
-            periods.append(period)
-            descriptions.append(description)
+            item = items.pop() if day == last_day else WorkDay(year, month, day, [])
+            item.periods.append(period)
             items.append(item)
             last_day = day
             continue
@@ -113,21 +104,18 @@ def main():
     last_week = None
     week_hours = 0
     total_hours = 0
-    print(items)
     for item in items:
         #print(item)
-        (date, periods, descriptions) = item
-        (_, week, weekday) = date.isocalendar()
-        sum_hours = sum([x.hours() for x in periods])
-        desc_text = " * ".join(descriptions)
-        if week != last_week:
+        sum_hours = sum([x.hours() for x in item.periods])
+        desc_text = " * ".join(item.descriptions)
+        if item.week != last_week:
             if last_week:
                 print(week_summary(week_hours))
-            print(texts['calendar_week'] + format(week) + ":")
+            print(texts['calendar_week'] + format(item.week) + ":")
             print("----------")
             week_hours = 0
-            last_week = week
-        print("{}, {}\t{}\t{}".format(week_day_names[weekday-1], date.strftime('%d.%m.'), sum_hours, desc_text))
+            last_week = item.   week
+        print("{}, {}\t{}\t{}".format(week_day_names[item.weekday-1], item.date.strftime('%d.%m.'), sum_hours, desc_text))
         week_hours += sum_hours
         total_hours += sum_hours
     print(week_summary(week_hours))
@@ -139,6 +127,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
