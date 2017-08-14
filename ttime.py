@@ -3,6 +3,7 @@ import re
 import datetime
 import fileinput
 import locale
+import calendar
 
 
 def get_language():
@@ -13,14 +14,12 @@ def get_language():
 
 texts = {
     'en': {
-        'week_days': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Son'],
         'calendar_week': 'CW',
         'total': 'total',
         'totalHours': 'total hrs.',
         'totalDays': 'total days'
     },
     'de': {
-        'week_days': ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'],
         'calendar_week': 'KW',
         'total': 'gesamt',
         'totalHours': 'gesamt Std.',
@@ -47,7 +46,26 @@ class Period:
         return self.minutes() / 60
 
 
-def read_input(file_input = fileinput.input()):
+class WorkDay:
+    def __init__(self, year, month, day, periods):
+        self.year = int(year)
+        self.month = int(month)
+        self.day = int(day)
+        self.date = datetime.date(year, month, day)
+        self.periods = periods
+    def __eq__(self, other):
+        return self.date == other.date
+    def day_no(self):
+        return date.strftime('%d')
+    def week_no(self):
+        return date.strftime('%w')
+    def minutes(self):
+        return sum([p.minutes() for p in periods])
+    def hours(self):
+        return self.minutes / 60
+
+
+def read_workdays(file_input = fileinput.input()):
     month_year_pattern='^\[(\d\d)/(\d\d\d\d)]$'
     log_work_pattern='^(\d\d\.)?\s+(\d\d\d\d)-(\d\d\d\d)\s+(.*)$'
     bad_format_err = Exception('bad format!')
@@ -84,11 +102,18 @@ def read_input(file_input = fileinput.input()):
 
 
 def main():
-    items = read_input()
+    template_text = ''
+    with open('text_template_de.txt', 'r') as f:
+      template_text = f.read()
+    # set language to system default language (for weekday display)
+    locale.resetlocale()
+    week_day_names = list(calendar.day_abbr)
+    items = read_workdays()
     week_summary = lambda hours: "----------\n{}:  \t{}\n".format(texts['total'], hours)
     last_week = None
     week_hours = 0
     total_hours = 0
+    print(items)
     for item in items:
         #print(item)
         (date, periods, descriptions) = item
@@ -102,7 +127,7 @@ def main():
             print("----------")
             week_hours = 0
             last_week = week
-        print("{}, {}\t{}\t{}".format(texts['week_days'][weekday-1], date.strftime('%d.%m.'), sum_hours, desc_text))
+        print("{}, {}\t{}\t{}".format(week_day_names[weekday-1], date.strftime('%d.%m.'), sum_hours, desc_text))
         week_hours += sum_hours
         total_hours += sum_hours
     print(week_summary(week_hours))

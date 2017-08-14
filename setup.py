@@ -9,6 +9,9 @@ setup(
     author_email='frankbe@web.de',
     url='https://github.com/frankbe/ttime',
     py_modules=['ttime']
+    install_requires=[
+        'Jinja2',
+    ],
     #scripts=['scripts/ttime']
     #entry_points = { 'console_scripts': [ 'ttime = ttime:main', ], },
 )
