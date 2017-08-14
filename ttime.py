@@ -2,6 +2,31 @@
 import re
 import datetime
 import fileinput
+import locale
+
+
+def get_language():
+    try:
+        return locale.getdefaultlocale()[0][:2]
+    except:
+        return 'en'
+
+texts = {
+    'en': {
+        'week_days': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Son'],
+        'calendar_week': 'CW',
+        'total': 'total',
+        'totalHours': 'total hrs.',
+        'totalDays': 'total days'
+    },
+    'de': {
+        'week_days': ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'],
+        'calendar_week': 'KW',
+        'total': 'gesamt',
+        'totalHours': 'gesamt Std.',
+        'totalDays': 'gesamt Tage'
+    }
+}[get_language()]
 
 
 class Period:
@@ -59,9 +84,8 @@ def read_input(file_input = fileinput.input()):
 
 
 def main():
-    week_day_names = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']
     items = read_input()
-    week_summary = lambda hours: "----------\ngesamt:  \t{}\n".format(hours)
+    week_summary = lambda hours: "----------\n{}:  \t{}\n".format(texts['total'], hours)
     last_week = None
     week_hours = 0
     total_hours = 0
@@ -74,16 +98,17 @@ def main():
         if week != last_week:
             if last_week:
                 print(week_summary(week_hours))
-            print("KW{}:\n----------".format(week))
+            print(texts['calendar_week'] + format(week) + ":")
+            print("----------")
             week_hours = 0
             last_week = week
-        print("{}, {}\t{}\t{}".format(week_day_names[weekday-1], date.strftime('%d.%m.'), sum_hours, desc_text))
+        print("{}, {}\t{}\t{}".format(texts['week_days'][weekday-1], date.strftime('%d.%m.'), sum_hours, desc_text))
         week_hours += sum_hours
         total_hours += sum_hours
     print(week_summary(week_hours))
     print("=======================================================")
-    print("gesamt Std.:  \t{}".format(total_hours))
-    print("gesamt Tage:  \t{}".format(total_hours/8))
+    print("{}:  \t{}".format(texts['totalHours'], total_hours))
+    print("{}:  \t{}".format(texts['totalDays'], total_hours/8))
 
 
 

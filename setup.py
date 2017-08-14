@@ -1,4 +1,5 @@
-from distutils.core import setup
+#from distutils.core import setup
+from setuptools import setup
 
 setup(
     name='ttime',
@@ -8,6 +9,8 @@ setup(
     author_email='frankbe@web.de',
     url='https://github.com/frankbe/ttime',
     py_modules=['ttime']
+    #scripts=['scripts/ttime']
+    #entry_points = { 'console_scripts': [ 'ttime = ttime:main', ], },
 )
 
 #packages=['ttime']
