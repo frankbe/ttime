@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
     name='ttime',
-    version='0.1',
+    version='0.2',
     description='a text filed base Time Tracking tool',
     author='Berthold Frank',
     author_email='frankbe@web.de',
