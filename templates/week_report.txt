@@ -1,0 +1,17 @@
+====================
+{{msg.title_x}}
+====================
+
+{% for week, weekdays in items|groupby('week') %}
+{{msg.cw}}{{week.week_no}}:
+{% for d in weekdays %}
+{{(d.day_name + ', ' + d.day_no + '.' + d.month_no + '.' + d.year_no).ljust(15)}}{{(d.hours|string).rjust(5)}}  {{d.description}}
+{% endfor %}
+{{msg.total.ljust(15)}}{{ (weekdays|sum(attribute='hours')|string).rjust(5) }}
+
+{% endfor %}
+====================
+{{msg.total_hrs.ljust(15)}}{{(total_hours|string).rjust(5)}}
+{{msg.total_days.ljust(15)}}{{(total_days|string).rjust(5)}}
+
+

@@ -10,30 +10,11 @@ import sys
 
 # set language to system default language (for weekday display)
 locale.resetlocale()
-WEEK_DAY_NAMES = list(calendar.day_abbr)
+
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
-
-
-def get_language():
-    try:
-        return locale.getdefaultlocale()[0][:2]
-    except:
-        return 'en'
-
-texts = {
-    'en': {
-        'calendar_week': 'CW',
-        'total': 'total',
-        'totalHours': 'total hrs.',
-        'totalDays': 'total days'
-    },
-    'de': {
-        'calendar_week': 'KW',
-        'total': 'gesamt',
-        'totalHours': 'gesamt Std.',
-        'totalDays': 'gesamt Tage'
-    }
-}[get_language()]
+WEEK_DAY_NAMES = list(calendar.day_abbr)
+TEMPLATE_DIR = 'templates'
+DEFAULT_TEMPLATE_FILE = 'week_report.txt'
 
 
 class WorkPeriod:
@@ -75,13 +56,35 @@ class WorkDay:
         self.day_no = self.date.strftime('%d')
         self.month_no = self.date.strftime('%m')
         self.year_no = self.date.strftime('%y')
-        self.description = " | ".join([p.description for p in periods])
+        self.description = " | ".join([p.description for p in periods if p.description])
         self.minutes = sum([p.minutes for p in self.periods])
         self.hours = float(self.minutes / 60)
     def __eq__(self, other):
         return self.date == other.date
     def __repr__(self):
         return str(self.date) + (", ".join(self.periods))
+
+
+class MsgStruct:
+    def __init__(self, **entries):
+        self.__dict__.update(entries)
+
+
+def get_language():
+    try:
+        return locale.getdefaultlocale()[0][:2]
+    except:
+        return 'en'
+
+
+def load_template_messages(template_filename):
+    template_msg_file = template_filename + '.config'
+    config = configparser.ConfigParser()
+    config.read(template_msg_file)
+    lang = get_language()
+    d = dict(config[lang]) if config.has_section(lang) else {}
+    # d = {s:dict(config.items(s)) for s in config.sections()}
+    return MsgStruct(**d)
 
 
 def read_workdays(config):
@@ -115,12 +118,14 @@ def main():
     config.read(times_file)
     items = read_workdays(config)
     total_hours = sum([x.hours for x in items])
-    template = Environment(loader=FileSystemLoader(THIS_DIR), trim_blocks=True)\
-        .get_template('text_de_template.txt')
+    template_file = TEMPLATE_DIR + "/" + DEFAULT_TEMPLATE_FILE
+    messages = load_template_messages(template_file)
+    template = Environment(loader=FileSystemLoader(THIS_DIR), trim_blocks=True).get_template(template_file)
     print(template.render(
         items = items,
         total_hours= total_hours,
-        total_days = total_hours / 8
+        total_days = total_hours / 8,
+        msg = messages
     ))
 
 
