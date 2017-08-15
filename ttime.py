@@ -14,26 +14,26 @@ WEEK_DAY_NAMES = list(calendar.day_abbr)
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
-def get_language():
-    try:
-        return locale.getdefaultlocale()[0][:2]
-    except:
-        return 'en'
-
-texts = {
-    'en': {
-        'calendar_week': 'CW',
-        'total': 'total',
-        'totalHours': 'total hrs.',
-        'totalDays': 'total days'
-    },
-    'de': {
-        'calendar_week': 'KW',
-        'total': 'gesamt',
-        'totalHours': 'gesamt Std.',
-        'totalDays': 'gesamt Tage'
-    }
-}[get_language()]
+# def get_language():
+#     try:
+#         return locale.getdefaultlocale()[0][:2]
+#     except:
+#         return 'en'
+#
+# texts = {
+#     'en': {
+#         'calendar_week': 'CW',
+#         'total': 'total',
+#         'totalHours': 'total hrs.',
+#         'totalDays': 'total days'
+#     },
+#     'de': {
+#         'calendar_week': 'KW',
+#         'total': 'gesamt',
+#         'totalHours': 'gesamt Std.',
+#         'totalDays': 'gesamt Tage'
+#     }
+# }[get_language()]
 
 
 class WorkPeriod:
