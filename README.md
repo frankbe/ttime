@@ -1,7 +1,7 @@
 # ttime - Time tracking with simple text files
 
-You record our work time with your favourite editor in a simple text file (see example_times.txt).
-The tool is only used to analyse the time data.
+Record your work time with a text editor in a simple text file (see example_times.txt).
+The tool ttime is only for reporting. 
 
 ## setup
 

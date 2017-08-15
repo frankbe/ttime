@@ -78,13 +78,13 @@ def get_language():
 
 
 def load_template_messages(template_filename):
-    template_msg_file = template_filename + '.config'
+    template_msg_file = os.path.join(THIS_DIR, template_filename + '.config')
     config = configparser.ConfigParser()
     config.read(template_msg_file)
     lang = get_language()
     d = dict(config[lang]) if config.has_section(lang) else {}
     # d = {s:dict(config.items(s)) for s in config.sections()}
-    return MsgStruct(**d)
+    return MsgStruct(**d) if d else None
 
 
 def read_workdays(config):

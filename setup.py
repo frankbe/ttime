@@ -14,7 +14,8 @@ setup(
         'Jinja2',
     ],
     include_package_data=True,
-    data_files=[('.', ['text_de_template.txt'])]
+    data_files=[('templates', ['templates/week_report.txt', 'templates/week_report.txt.config'])]
+    #data_files=[('.', ['text_de_template.txt'])]
     # ,package_data={'ttime': ['text_de_template.txt']}
     #python_requires=">=2.7"
     #scripts=['scripts/ttime']
