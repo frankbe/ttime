@@ -1,8 +1,17 @@
-#!/bin/python
+#!/usr/bin/env python3
 import re
 import datetime
-import fileinput
 import locale
+import calendar
+import os
+from jinja2 import Environment, FileSystemLoader
+import configparser
+import sys
+
+# set language to system default language (for weekday display)
+locale.resetlocale()
+WEEK_DAY_NAMES = list(calendar.day_abbr)
+THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 def get_language():
@@ -13,14 +22,12 @@ def get_language():
 
 texts = {
     'en': {
-        'week_days': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Son'],
         'calendar_week': 'CW',
         'total': 'total',
         'totalHours': 'total hrs.',
         'totalDays': 'total days'
     },
     'de': {
-        'week_days': ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'],
         'calendar_week': 'KW',
         'total': 'gesamt',
         'totalHours': 'gesamt Std.',
@@ -29,91 +36,95 @@ texts = {
 }[get_language()]
 
 
-class Period:
-    def __init__(self, start_hour, start_minute, end_hour, end_minute):
-        self.start_hour = int(start_hour)
+class WorkPeriod:
+    def __init__(self, start_hour, start_minute, end_hour, end_minute, description):
+        self.start_hour = float(start_hour)
         self.start_minute = int(start_minute)
         self.end_hour = int(end_hour)
         self.end_minute = int(end_minute)
+        self.description = description
+        self.minutes = (self.end_hour * 60 + self.end_minute) - (self.start_hour * 60 + self.start_minute)
+        self.hours = float(self.minutes / 60)
     def __repr__(self):
-        return "Period({})".format(self.range_str())
-    def range_str(self):
-        return "{}:{}-{}:{}".format(self.start_hour, self.start_minute, self.end_hour, self.end_minute)
-    def minutes(self):
-        sm = (self.start_hour * 60 + self.start_minute)
-        em = (self.end_hour * 60 + self.end_minute)
-        return em - sm
-    def hours(self):
-        return self.minutes() / 60
+        range_str = "{}:{}-{}:{}".format(self.start_hour, self.start_minute, self.end_hour, self.end_minute)
+        return "Period({})".format(range_str)
 
 
-def read_input(file_input = fileinput.input()):
-    month_year_pattern='^\[(\d\d)/(\d\d\d\d)]$'
-    log_work_pattern='^(\d\d\.)?\s+(\d\d\d\d)-(\d\d\d\d)\s+(.*)$'
+class WorkWeek:
+    def __init__(self, year, week_no):
+        self.year = int(year)
+        self.week_no = int(week_no)
+    def __eq__(self, other):
+        return self.year == other.year and self.week_no == other.week_no
+    def __lt__(self, other):
+        return self.week_no < other.week_no if self.year == other.year else self.year < other.year
+    def __repr__(self):
+        return str(self.year) + " CW" + self.week_no
+
+
+class WorkDay:
+    def __init__(self, year, month, day, periods):
+        self.year = int(year)
+        self.month = int(month)
+        self.day = int(day)
+        self.date = datetime.date(year, month, day)
+        self.periods = periods
+        (week_year, week_no, self.weekday) = self.date.isocalendar()
+        self.week = WorkWeek(week_year, week_no)
+        self.day_name = WEEK_DAY_NAMES[self.weekday - 1]
+        self.day_no = self.date.strftime('%d')
+        self.month_no = self.date.strftime('%m')
+        self.year_no = self.date.strftime('%y')
+        self.description = " | ".join([p.description for p in periods])
+        self.minutes = sum([p.minutes for p in self.periods])
+        self.hours = float(self.minutes / 60)
+    def __eq__(self, other):
+        return self.date == other.date
+    def __repr__(self):
+        return str(self.date) + (", ".join(self.periods))
+
+
+def read_workdays(config):
+    month_year_pattern='^(\d\d)/(\d\d\d\d)$'
+    period_pattern='^(\d\d\d\d)-(\d\d\d\d)\s*(.*)$'
     bad_format_err = Exception('bad format!')
-    last_day = None
-    year = None
-    month = None
-    items =[]
-    for line in file_input:
-        # Monat & Jahr Definition, z.B. '[08/2015]'
-        match = re.search(month_year_pattern, line)
-        if match:
-            (month, year) = [int(x) for x in match.groups()]
-            continue
-        # Logeintrag, z.B. '21. 0930-1230 T&I-Zugriffsproblem, Liste'
-        match = re.search(log_work_pattern, line)
-        if match:
-            if not (month and year):
-                raise bad_format_err
-            (day, start_time, end_time, description) = match.groups()
-            day = int(day[:2]) if day else last_day
-            if not day:
-                raise bad_format_err
-            date = datetime.date(year, month, day)
-            period = Period(start_time[:2], start_time[2:], end_time[:2], end_time[2:])
-            # sys.stdout.write(day, period.hours(), description)
-            item = items.pop() if day == last_day else (date, [], [])
-            (_, periods, descriptions) = item
-            periods.append(period)
-            descriptions.append(description)
-            items.append(item)
-            last_day = day
-            continue
+    items = []
+    for section in config.sections():
+        match = re.search(month_year_pattern, section)
+        if not match:
+            raise bad_format_err
+        (month, year) = [int(x) for x in match.groups()]
+        for key in config[section]:
+            day = int(key[:2])
+            periods = []
+            for period_str in config[section][key].split("\n"):
+                match = re.search(period_pattern, period_str)
+                if not match:
+                    raise bad_format_err
+                (start_time, end_time, description) = match.groups()
+                periods.append(WorkPeriod(start_time[:2], start_time[2:], end_time[:2], end_time[2:], description))
+            items.append(WorkDay(year, month, day, periods))
     return items
 
 
 def main():
-    items = read_input()
-    week_summary = lambda hours: "----------\n{}:  \t{}\n".format(texts['total'], hours)
-    last_week = None
-    week_hours = 0
-    total_hours = 0
-    for item in items:
-        #print(item)
-        (date, periods, descriptions) = item
-        (_, week, weekday) = date.isocalendar()
-        sum_hours = sum([x.hours() for x in periods])
-        desc_text = " * ".join(descriptions)
-        if week != last_week:
-            if last_week:
-                print(week_summary(week_hours))
-            print(texts['calendar_week'] + format(week) + ":")
-            print("----------")
-            week_hours = 0
-            last_week = week
-        print("{}, {}\t{}\t{}".format(texts['week_days'][weekday-1], date.strftime('%d.%m.'), sum_hours, desc_text))
-        week_hours += sum_hours
-        total_hours += sum_hours
-    print(week_summary(week_hours))
-    print("=======================================================")
-    print("{}:  \t{}".format(texts['totalHours'], total_hours))
-    print("{}:  \t{}".format(texts['totalDays'], total_hours/8))
+    if len(sys.argv) != 2:
+        raise Exception("wrong arguments")
+    times_file = sys.argv[1]
+    config = configparser.ConfigParser(delimiters = ['.'])
+    config.read(times_file)
+    items = read_workdays(config)
+    total_hours = sum([x.hours for x in items])
+    template = Environment(loader=FileSystemLoader(THIS_DIR), trim_blocks=True)\
+        .get_template('text_de_template.txt')
+    print(template.render(
+        items = items,
+        total_hours= total_hours,
+        total_days = total_hours / 8
+    ))
 
 
+# if sys.version_info < (3,4): sys.exit('Python < 3.4 is not supported')
 
 if __name__ == "__main__":
     main()
-
-
-
