@@ -38,13 +38,13 @@ texts = {
 
 class WorkPeriod:
     def __init__(self, start_hour, start_minute, end_hour, end_minute, description):
-        self.start_hour = int(start_hour)
+        self.start_hour = float(start_hour)
         self.start_minute = int(start_minute)
         self.end_hour = int(end_hour)
         self.end_minute = int(end_minute)
         self.description = description
         self.minutes = (self.end_hour * 60 + self.end_minute) - (self.start_hour * 60 + self.start_minute)
-        self.hours = self.minutes / 60
+        self.hours = float(self.minutes / 60)
     def __repr__(self):
         range_str = "{}:{}-{}:{}".format(self.start_hour, self.start_minute, self.end_hour, self.end_minute)
         return "Period({})".format(range_str)
@@ -77,7 +77,7 @@ class WorkDay:
         self.year_no = self.date.strftime('%y')
         self.description = " | ".join([p.description for p in periods])
         self.minutes = sum([p.minutes for p in self.periods])
-        self.hours = self.minutes / 60
+        self.hours = float(self.minutes / 60)
     def __eq__(self, other):
         return self.date == other.date
     def __repr__(self):
@@ -124,8 +124,7 @@ def main():
     ))
 
 
-if sys.version_info < (3,4):
-    sys.exit('Python < 3.4 is not supported')
+# if sys.version_info < (3,4): sys.exit('Python < 3.4 is not supported')
 
 if __name__ == "__main__":
     main()

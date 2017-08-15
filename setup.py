@@ -10,9 +10,13 @@ setup(
     url='https://github.com/frankbe/ttime',
     py_modules=['ttime'],
     install_requires=[
+        'configparser',
         'Jinja2',
     ],
-    python_requires=">=3.4"
+    include_package_data=True,
+    data_files=[('.', ['text_de_template.txt'])]
+    # ,package_data={'ttime': ['text_de_template.txt']}
+    #python_requires=">=2.7"
     #scripts=['scripts/ttime']
     #entry_points = { 'console_scripts': [ 'ttime = ttime:main', ], },
 )
