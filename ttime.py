@@ -112,7 +112,8 @@ def read_workdays(config):
 
 def main():
     if len(sys.argv) != 2:
-        raise Exception("wrong arguments")
+        sys.stderr.write("wrong arguments!\n")
+        sys.exit(1)
     times_file = sys.argv[1]
     config = configparser.ConfigParser(delimiters = ['.'])
     config.read(times_file)
