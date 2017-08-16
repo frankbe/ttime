@@ -1,7 +1,13 @@
 # ttime - Time tracking with simple text files
 
-Record your work time with a text editor in a simple text file (see example_times.txt).
-The tool ttime is only for reporting. 
+Record your work time in plain text files with any text editor (see example_times.txt).
+Analyze your work time with `ttime FILE_NAME`. 
+
+## features
+
+* extendable output formats with jinja2 templates
+* optional multi language support
+* VCS friendly format
 
 ## setup
 
@@ -9,7 +15,7 @@ The tool ttime is only for reporting.
 * `cd ttime`
 * `python setup.py install --user`
 
-## run the samples
+## run the sample
 
 * `ttime [PATH_TO_REPOSITORY_CLONE]/example_times.txt`
 
