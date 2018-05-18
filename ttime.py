@@ -111,12 +111,19 @@ def read_workdays(config):
 
 
 def main():
-    if len(sys.argv) != 2:
+    # currently, there is only one import file supported
+    if len(sys.argv) > 2:
         sys.stderr.write("wrong arguments!\n")
         sys.exit(1)
-    times_file = sys.argv[1]
+    #config = configparser.ConfigParser(delimiters = ['.'])
+    #if len(sys.argv) == 2:
+    #    config.read(sys.argv[1])
+    #else:
+    #    config.read_string(sys.stdin.read())
+    import fileinput
     config = configparser.ConfigParser(delimiters = ['.'])
-    config.read(times_file)
+    config_text = "".join(line for line in fileinput.input(sys.argv[1:]))
+    config.read_string(config_text)
     items = read_workdays(config)
     total_hours = sum([x.hours for x in items])
     template_file = TEMPLATE_DIR + "/" + DEFAULT_TEMPLATE_FILE
