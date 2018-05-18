@@ -17,6 +17,11 @@ TEMPLATE_DIR = 'templates'
 DEFAULT_TEMPLATE_FILE = 'week_report.txt'
 
 
+class MsgStruct:
+    def __init__(self, **entries):
+        self.__dict__.update(entries)
+
+
 class WorkPeriod:
     def __init__(self, start_hour, start_minute, end_hour, end_minute, description):
         self.start_hour = float(start_hour)
@@ -65,9 +70,16 @@ class WorkDay:
         return str(self.date) + (", ".join(self.periods))
 
 
-class MsgStruct:
-    def __init__(self, **entries):
-        self.__dict__.update(entries)
+def filter_workdays_by_period(workdays, period_filter):
+    if not period_filter:
+        return workdays
+    results = []
+    for src_day in workdays:
+        tgt_periods = [p for p in src_day.periods if period_filter(p)]
+        tgt_day = WorkDay(src_day.year, src_day.month, src_day.day, tgt_periods)
+        if len(tgt_day.periods) > 0:
+            results.append(tgt_day)
+    return results
 
 
 def get_language():
@@ -111,20 +123,19 @@ def read_workdays(config):
 
 
 def main():
-    # currently, there is only one import file supported
-    if len(sys.argv) > 2:
-        sys.stderr.write("wrong arguments!\n")
-        sys.exit(1)
-    #config = configparser.ConfigParser(delimiters = ['.'])
-    #if len(sys.argv) == 2:
-    #    config.read(sys.argv[1])
-    #else:
-    #    config.read_string(sys.stdin.read())
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('infile', nargs='?', type=argparse.FileType('r'), default=sys.stdin)
+    parser.add_argument('-f', '--filter', help='filter work period by description', nargs=1)
+    args = parser.parse_args()
     import fileinput
-    config = configparser.ConfigParser(delimiters = ['.'])
-    config_text = "".join(line for line in fileinput.input(sys.argv[1:]))
+    config = configparser.ConfigParser(delimiters = ['.'], strict=False)
+    # config_text = "".join(line for line in fileinput.input(sys.argv[1:]))
+    config_text = "".join(line for line in args.infile)
     config.read_string(config_text)
-    items = read_workdays(config)
+    unfiltered_items = read_workdays(config)
+    period_filter = (lambda p: args.filter[0] in p.description) if args.filter else None
+    items = filter_workdays_by_period(unfiltered_items, period_filter)
     total_hours = sum([x.hours for x in items])
     template_file = TEMPLATE_DIR + "/" + DEFAULT_TEMPLATE_FILE
     messages = load_template_messages(template_file)
