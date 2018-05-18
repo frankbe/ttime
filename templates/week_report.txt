@@ -3,11 +3,11 @@
 ====================
 
 {% for week, weekdays in items|groupby('week') %}
-{{msg.cw}}{{week.week_no}}:
+{{week.year}} {{msg.cw}}{{week.week_no}}:
 {% for d in weekdays %}
- {{(d.day_name + ', ' + d.day_no + '.' + d.month_no + '.' + d.year_no).ljust(14)}}{{(d.hours|round(1)|string).rjust(5)}}  {{d.description}}
+  {{(d.day_name + ', ' + d.day_no + '.' + d.month_no + '.' + d.year_no).ljust(14)}}{{(d.hours|round(1)|string).rjust(5)}}  {{d.description}}
 {% endfor %}
-{{msg.total.ljust(15)}}{{ (weekdays|sum(attribute='hours')|round(1)|string).rjust(5) }}
+{{msg.total.ljust(16)}}{{ (weekdays|sum(attribute='hours')|round(1)|string).rjust(5) }}
 
 {% endfor %}
 ====================
