@@ -70,14 +70,12 @@ class WorkDay:
         return str(self.date) + (", ".join(self.periods))
 
 
-def filter_workdays(workdays, period_filter_text):
-    if not period_filter_text:
+def filter_workdays(workdays, day_filters = [], period_filters = []):
+    if not (day_filters or period_filters):
         return workdays
     results = []
-    def period_filter(p):
-        return period_filter_text in p.description if period_filter_text else True
-    for src_day in workdays:
-        tgt_periods = [p for p in src_day.periods if period_filter(p)]
+    for src_day in [d for d in workdays if all(f(d) for f in day_filters)]:
+        tgt_periods = [p for p in src_day.periods if all(f(p) for f in period_filters)]
         tgt_day = WorkDay(src_day.year, src_day.month, src_day.day, tgt_periods)
         if len(tgt_day.periods) > 0:
             results.append(tgt_day)
@@ -126,23 +124,41 @@ def read_workdays(config_parser):
 
 def _get_args():
     import argparse
-    # from  datetime import datetime
-    # def valid_date(s):
-    #     try:
-    #         return datetime.strptime(s, "%Y-%m-%d")
-    #     except ValueError:
-    #         msg = "Not a valid date: '{0}'.".format(s)
-    #         raise argparse.ArgumentTypeError(msg)
+    from  datetime import datetime
+    def valid_date(s):
+        try:
+            return datetime.strptime(s, "%Y-%m-%d").date()
+        except ValueError:
+            msg = "Not a valid date: '{0}'.".format(s)
+            raise argparse.ArgumentTypeError(msg)
     parser = argparse.ArgumentParser()
     parser.add_argument('infile', nargs='?', type=argparse.FileType('r'), default=sys.stdin)
-    parser.add_argument('-t', '--text', help='filter work period by text', nargs=1)
-    # parser.add_argument("-s", "--startdate", help="start date - format YYYY-MM-DD", type=valid_date)
-    # parser.add_argument("-e", "--enddate", help="end date - format YYYY-MM-DD", type=valid_date)
-    # parser.add_argument("-d", "--date", help="date - format YYYY-MM-DD", type=valid_date)
+    parser.add_argument('-t', '--text', help='filter work period by text', nargs='?')
+    parser.add_argument("-s", "--startdate", help="start date - format YYYY-MM-DD", type=valid_date, nargs='?')
+    parser.add_argument("-e", "--enddate", help="end date - format YYYY-MM-DD", type=valid_date, nargs='?')
+    parser.add_argument("-d", "--date", help="date - format YYYY-MM-DD", type=valid_date)
     return parser.parse_args()
 
 
-def _get_parser(file):
+def _get_day_filters(args):
+    filters = []
+    if args.startdate:
+        filters.append(lambda day: day.date >= args.startdate)
+    if args.enddate:
+        filters.append(lambda day: day.date <= args.enddate)    
+    if args.date:
+        filters.append(lambda day: day.date == args.date)    
+    return filters    
+
+
+def _get_period_filters(args):
+    filters = []
+    if args.text:
+        filters.append(lambda period: args.text in period.description)
+    return filters    
+
+
+def _get_workfile_parser(file):
     parser = configparser.ConfigParser(delimiters = ['.'], strict=False)
     text = "".join(line for line in file)
     parser.read_string(text)
@@ -151,9 +167,12 @@ def _get_parser(file):
 
 def main():
     args = _get_args()
-    parser = _get_parser(args.infile)
-    unfiltered_items = read_workdays(parser)
-    items = filter_workdays(unfiltered_items, period_filter_text = args.text[0] if args.text else None)
+    workfile_parser = _get_workfile_parser(args.infile)
+    unfiltered_items = read_workdays(workfile_parser)
+    items = filter_workdays(unfiltered_items, 
+        day_filters = _get_day_filters(args),
+        period_filters = _get_period_filters(args)
+    )
     total_hours = sum([x.hours for x in items])
     template_file = TEMPLATE_DIR + "/" + DEFAULT_TEMPLATE_FILE
     messages = load_template_messages(template_file)
