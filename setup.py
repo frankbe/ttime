@@ -4,7 +4,7 @@ from setuptools import setup
 setup(
     name='ttime',
     version='0.2-SNAPSHOT',
-    description='a text filed base Time Tracking tool',
+    description='a text file based time tracking tool',
     author='Berthold Frank',
     author_email='frankbe@web.de',
     url='https://github.com/frankbe/ttime',

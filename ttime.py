@@ -70,10 +70,12 @@ class WorkDay:
         return str(self.date) + (", ".join(self.periods))
 
 
-def filter_workdays_by_period(workdays, period_filter):
-    if not period_filter:
+def filter_workdays(workdays, period_filter_text):
+    if not period_filter_text:
         return workdays
     results = []
+    def period_filter(p):
+        return period_filter_text in p.description if period_filter_text else True
     for src_day in workdays:
         tgt_periods = [p for p in src_day.periods if period_filter(p)]
         tgt_day = WorkDay(src_day.year, src_day.month, src_day.day, tgt_periods)
@@ -99,20 +101,20 @@ def load_template_messages(template_filename):
     return MsgStruct(**d) if d else None
 
 
-def read_workdays(config):
+def read_workdays(config_parser):
     month_year_pattern='^(\d\d)/(\d\d\d\d)$'
     period_pattern='^(\d\d\d\d)-(\d\d\d\d)\s*(.*)$'
     bad_format_err = Exception('bad format!')
     items = []
-    for section in config.sections():
+    for section in config_parser.sections():
         match = re.search(month_year_pattern, section)
         if not match:
             raise bad_format_err
         (month, year) = [int(x) for x in match.groups()]
-        for key in config[section]:
+        for key in config_parser[section]:
             day = int(key[:2])
             periods = []
-            for period_str in config[section][key].split("\n"):
+            for period_str in config_parser[section][key].split("\n"):
                 match = re.search(period_pattern, period_str)
                 if not match:
                     raise bad_format_err
@@ -121,21 +123,24 @@ def read_workdays(config):
             items.append(WorkDay(year, month, day, periods))
     return items
 
-
-def main():
+def _get_args():
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('infile', nargs='?', type=argparse.FileType('r'), default=sys.stdin)
     parser.add_argument('-f', '--filter', help='filter work period by description', nargs=1)
-    args = parser.parse_args()
-    import fileinput
-    config = configparser.ConfigParser(delimiters = ['.'], strict=False)
-    # config_text = "".join(line for line in fileinput.input(sys.argv[1:]))
-    config_text = "".join(line for line in args.infile)
-    config.read_string(config_text)
-    unfiltered_items = read_workdays(config)
-    period_filter = (lambda p: args.filter[0] in p.description) if args.filter else None
-    items = filter_workdays_by_period(unfiltered_items, period_filter)
+    return parser.parse_args()
+
+def _get_parser(file):
+    parser = configparser.ConfigParser(delimiters = ['.'], strict=False)
+    text = "".join(line for line in file)
+    parser.read_string(text)
+    return parser
+
+def main():
+    args = _get_args()
+    parser = _get_parser(args.infile)
+    unfiltered_items = read_workdays(parser)
+    items = filter_workdays(unfiltered_items, period_filter_text = args.filter[0] if args.filter else None)
     total_hours = sum([x.hours for x in items])
     template_file = TEMPLATE_DIR + "/" + DEFAULT_TEMPLATE_FILE
     messages = load_template_messages(template_file)
