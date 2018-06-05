@@ -102,8 +102,8 @@ def load_template_messages(template_filename):
 
 
 def read_workdays(config_parser):
-    month_year_pattern='^(\d\d)/(\d\d\d\d)$'
-    period_pattern='^(\d\d\d\d)-(\d\d\d\d)\s*(.*)$'
+    month_year_pattern = r'^(\d\d)/(\d\d\d\d)$'
+    period_pattern = r'^(\d\d\d\d)-(\d\d\d\d)\s*(.*)$'
     bad_format_err = Exception('bad format!')
     items = []
     for section in config_parser.sections():
@@ -123,12 +123,24 @@ def read_workdays(config_parser):
             items.append(WorkDay(year, month, day, periods))
     return items
 
+
 def _get_args():
     import argparse
+    # from  datetime import datetime
+    # def valid_date(s):
+    #     try:
+    #         return datetime.strptime(s, "%Y-%m-%d")
+    #     except ValueError:
+    #         msg = "Not a valid date: '{0}'.".format(s)
+    #         raise argparse.ArgumentTypeError(msg)
     parser = argparse.ArgumentParser()
     parser.add_argument('infile', nargs='?', type=argparse.FileType('r'), default=sys.stdin)
-    parser.add_argument('-f', '--filter', help='filter work period by description', nargs=1)
+    parser.add_argument('-t', '--text', help='filter work period by text', nargs=1)
+    # parser.add_argument("-s", "--startdate", help="start date - format YYYY-MM-DD", type=valid_date)
+    # parser.add_argument("-e", "--enddate", help="end date - format YYYY-MM-DD", type=valid_date)
+    # parser.add_argument("-d", "--date", help="date - format YYYY-MM-DD", type=valid_date)
     return parser.parse_args()
+
 
 def _get_parser(file):
     parser = configparser.ConfigParser(delimiters = ['.'], strict=False)
@@ -136,11 +148,12 @@ def _get_parser(file):
     parser.read_string(text)
     return parser
 
+
 def main():
     args = _get_args()
     parser = _get_parser(args.infile)
     unfiltered_items = read_workdays(parser)
-    items = filter_workdays(unfiltered_items, period_filter_text = args.filter[0] if args.filter else None)
+    items = filter_workdays(unfiltered_items, period_filter_text = args.text[0] if args.text else None)
     total_hours = sum([x.hours for x in items])
     template_file = TEMPLATE_DIR + "/" + DEFAULT_TEMPLATE_FILE
     messages = load_template_messages(template_file)
