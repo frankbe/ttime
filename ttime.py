@@ -133,9 +133,9 @@ def _get_args():
             raise argparse.ArgumentTypeError(msg)
     parser = argparse.ArgumentParser()
     parser.add_argument('workfile', nargs='*', type=argparse.FileType('r'), default=sys.stdin)
-    parser.add_argument('-t', '--text', help='filter work period by text', nargs='?')
-    parser.add_argument("-s", "--startdate", help="start date - format YYYY-MM-DD", type=valid_date, nargs='?')
-    parser.add_argument("-e", "--enddate", help="end date - format YYYY-MM-DD", type=valid_date, nargs='?')
+    parser.add_argument('-t', '--text', help='filter work period by text')
+    parser.add_argument("-s", "--startdate", help="start date - format YYYY-MM-DD", type=valid_date)
+    parser.add_argument("-e", "--enddate", help="end date - format YYYY-MM-DD", type=valid_date)
     parser.add_argument("-d", "--date", help="date - format YYYY-MM-DD", type=valid_date)
     return parser.parse_args()
 

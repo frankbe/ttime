@@ -13,7 +13,7 @@ Analyze your work time with `ttime FILE_NAME`.
 
 * clone the repository
 * `cd ttime`
-* `python setup.py install --user`
+* `pip install .`. Or `pip install --user --editable .` on a developer machine
 
 ## run the sample
 
