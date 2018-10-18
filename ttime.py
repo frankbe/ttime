@@ -161,7 +161,9 @@ def _get_period_filters(args):
 def _get_workfile_parser(files):
     parser = configparser.ConfigParser(delimiters = ['.'], strict=False)
     text = "".join(["".join(line for line in file) for file in files]) 
-    parser.read_string(text)
+    # TODO improve
+    fallback_section='[01/0001]'
+    parser.read_string(fallback_section + '\n' + text)
     return parser
 
 
