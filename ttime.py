@@ -19,7 +19,7 @@ class MsgStruct:
 class WorkPeriod:
 
     def __init__(self, start_hour, start_minute, end_hour, end_minute, description):
-        self.start_hour = float(start_hour)
+        self.start_hour = int(start_hour)
         self.start_minute = int(start_minute)
         self.end_hour = int(end_hour)
         self.end_minute = int(end_minute)
