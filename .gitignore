@@ -1,12 +1,12 @@
 dist/
 build/
 MANIFEST
+__pycache__/
+.venv
+.idea/
 .ropeproject/
 *.egg-info/
 *.egg
 *~
-__pycache__/
-.idea/
-ve/
-ve2/
 *.spec
+tags
