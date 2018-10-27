@@ -1,12 +1,6 @@
 #!/usr/bin/env python3
-import re
-import datetime
-import locale
-import calendar
-import os
+import os, sys, re, locale, datetime, calendar, configparser # noqa
 from jinja2 import Environment, FileSystemLoader
-import configparser
-import sys
 
 # set language to system default language (for weekday display)
 locale.resetlocale()
@@ -23,32 +17,44 @@ class MsgStruct:
 
 
 class WorkPeriod:
+
     def __init__(self, start_hour, start_minute, end_hour, end_minute, description):
         self.start_hour = float(start_hour)
         self.start_minute = int(start_minute)
         self.end_hour = int(end_hour)
         self.end_minute = int(end_minute)
         self.description = description
-        self.minutes = (self.end_hour * 60 + self.end_minute) - (self.start_hour * 60 + self.start_minute)
+        self.minutes = \
+            (self.end_hour * 60 + self.end_minute) - \
+            (self.start_hour * 60 + self.start_minute)
         self.hours = float(self.minutes / 60)
+
     def __repr__(self):
-        range_str = "{}:{}-{}:{}".format(self.start_hour, self.start_minute, self.end_hour, self.end_minute)
+        range_str = "{}:{}-{}:{}".format(
+            self.start_hour, self.start_minute,
+            self.end_hour, self.end_minute)
         return "Period({})".format(range_str)
 
 
 class WorkWeek:
+
     def __init__(self, year, week_no):
         self.year = int(year)
         self.week_no = int(week_no)
+
     def __eq__(self, other):
         return self.year == other.year and self.week_no == other.week_no
+
     def __lt__(self, other):
-        return self.week_no < other.week_no if self.year == other.year else self.year < other.year
+        return self.week_no < other.week_no \
+                if self.year == other.year else self.year < other.year
+
     def __repr__(self):
         return str(self.year) + " CW" + self.week_no
 
 
 class WorkDay:
+
     def __init__(self, year, month, day, periods):
         self.year = int(year)
         self.month = int(month)
@@ -64,13 +70,15 @@ class WorkDay:
         self.description = " | ".join([p.description for p in periods if p.description])
         self.minutes = sum([p.minutes for p in self.periods])
         self.hours = float(self.minutes / 60)
+
     def __eq__(self, other):
         return self.date == other.date
+
     def __repr__(self):
         return str(self.date) + (", ".join(self.periods))
 
 
-def filter_workdays(workdays, day_filters = [], period_filters = []):
+def filter_workdays(workdays, day_filters=[], period_filters=[]):
     if not (day_filters or period_filters):
         return workdays
     results = []
@@ -85,7 +93,7 @@ def filter_workdays(workdays, day_filters = [], period_filters = []):
 def get_language():
     try:
         return locale.getdefaultlocale()[0][:2]
-    except:
+    except ValueError or IndexError:
         return 'en'
 
 
@@ -117,20 +125,27 @@ def read_workdays(config_parser):
                 if not match:
                     raise bad_format_err
                 (start_time, end_time, description) = match.groups()
-                periods.append(WorkPeriod(start_time[:2], start_time[2:], end_time[:2], end_time[2:], description))
+                periods.append(
+                    WorkPeriod(
+                        start_time[:2], start_time[2:],
+                        end_time[:2], end_time[2:], description
+                    )
+                )
             items.append(WorkDay(year, month, day, periods))
     return items
 
 
 def _get_args():
     import argparse
-    from  datetime import datetime
+    from datetime import datetime
+
     def valid_date(s):
         try:
             return datetime.strptime(s, "%Y-%m-%d").date()
         except ValueError:
             msg = "Not a valid date: '{0}'.".format(s)
             raise argparse.ArgumentTypeError(msg)
+
     parser = argparse.ArgumentParser()
     parser.add_argument('workfile', nargs='*', type=argparse.FileType('r'), default=sys.stdin)
     parser.add_argument('-t', '--text', help='filter work period by text')
@@ -145,24 +160,24 @@ def _get_day_filters(args):
     if args.startdate:
         filters.append(lambda day: day.date >= args.startdate)
     if args.enddate:
-        filters.append(lambda day: day.date <= args.enddate)    
+        filters.append(lambda day: day.date <= args.enddate)
     if args.date:
-        filters.append(lambda day: day.date == args.date)    
-    return filters    
+        filters.append(lambda day: day.date == args.date)
+    return filters
 
 
 def _get_period_filters(args):
     filters = []
     if args.text:
         filters.append(lambda period: args.text in period.description)
-    return filters    
+    return filters
 
 
 def _get_workfile_parser(files):
-    parser = configparser.ConfigParser(delimiters = ['.'], strict=False)
-    text = "".join(["".join(line for line in file) for file in files]) 
+    parser = configparser.ConfigParser(delimiters=['.'], strict=False)
+    text = "".join(["".join(line for line in file) for file in files])
     # TODO improve
-    fallback_section='[01/0001]'
+    fallback_section = '[01/0001]'
     parser.read_string(fallback_section + '\n' + text)
     return parser
 
@@ -171,23 +186,19 @@ def main():
     args = _get_args()
     workfile_parser = _get_workfile_parser(args.workfile)
     unfiltered_items = read_workdays(workfile_parser)
-    items = filter_workdays(unfiltered_items, 
+    items = filter_workdays(
+        unfiltered_items, 
         day_filters = _get_day_filters(args),
-        period_filters = _get_period_filters(args)
-    )
+        period_filters = _get_period_filters(args))
     total_hours = sum([x.hours for x in items])
     template_file = TEMPLATE_DIR + "/" + DEFAULT_TEMPLATE_FILE
     messages = load_template_messages(template_file)
-    template = Environment(loader=FileSystemLoader(THIS_DIR), trim_blocks=True).get_template(template_file)
+    template = Environment(loader=FileSystemLoader(THIS_DIR), trim_blocks=True) \
+        .get_template(template_file)
     print(template.render(
-        items = items,
-        total_hours= total_hours,
-        total_days = total_hours / 8,
-        msg = messages
-    ))
+        items=items, total_hours=total_hours,
+        total_days=total_hours / 8, msg=messages))
 
-
-# if sys.version_info < (3,4): sys.exit('Python < 3.4 is not supported')
 
 if __name__ == "__main__":
     main()
