@@ -1,7 +1,7 @@
-# ttime - Time tracking with simple text files
+# ttime - Time tracking in text files
 
-Record your work time in plain text files with any text editor (see example_times.txt).
-Analyze your work time with `ttime FILE_NAME`. 
+* Record your work time in text files with any text editor (see example_times.txt).
+* Analyze your work time with `ttime FILE_NAME`. 
 
 ## features
 
