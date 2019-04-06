@@ -1,0 +1,16 @@
+{% for year, year_group in items|groupby('year') %}
+{% for month, month_group in year_group|groupby('month_no') %}
+
+
+[{{ month }}/{{ year }}]
+
+{% for day in month_group %}
+{{day.day_no}}.
+{% for period in day.periods %}
+  {{period.range_str}} => {{period.minutes}} min
+{% endfor %}
+{% endfor %}
+{% endfor %}
+{% endfor %}
+
+

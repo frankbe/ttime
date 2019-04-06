@@ -1,0 +1,7 @@
+Jahr;Monat;Tag;Zeitraum;Minuten;Notizen
+{% for i in items %}
+{% for p in i.periods %}
+{{i.year}};{{i.month}};{{i.day}};{{p.range_str}};{{p.minutes}};{{p.description}}
+{% endfor %}
+{% endfor %}
+
