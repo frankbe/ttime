@@ -28,12 +28,12 @@ class WorkPeriod:
             (self.end_hour * 60 + self.end_minute) - \
             (self.start_hour * 60 + self.start_minute)
         self.hours = float(self.minutes / 60)
-
-    def __repr__(self):
-        range_str = "{}:{}-{}:{}".format(
+        self.range_str = "{:02}:{:02}-{:02}:{:02}".format(
             self.start_hour, self.start_minute,
             self.end_hour, self.end_minute)
-        return "Period({})".format(range_str)
+
+    def __repr__(self):
+        return "Period({})".format(this.range_str)
 
 
 class WorkWeek:
@@ -147,7 +147,8 @@ def _get_args():
             raise argparse.ArgumentTypeError(msg)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('workfile', nargs='*', type=argparse.FileType('r'), default=sys.stdin)
+    parser.add_argument('workfile', nargs='+', type=argparse.FileType('r'))
+    parser.add_argument('-f', '--format', help='use specific output format template file', type=argparse.FileType('r'))
     parser.add_argument('-t', '--text', help='filter work period by text')
     parser.add_argument("-s", "--startdate", help="start date - format YYYY-MM-DD", type=valid_date)
     parser.add_argument("-e", "--enddate", help="end date - format YYYY-MM-DD", type=valid_date)
@@ -191,7 +192,7 @@ def main():
         day_filters = _get_day_filters(args),
         period_filters = _get_period_filters(args))
     total_hours = sum([x.hours for x in items])
-    template_file = TEMPLATE_DIR + "/" + DEFAULT_TEMPLATE_FILE
+    template_file = args.format.name if args.format else TEMPLATE_DIR + "/" + DEFAULT_TEMPLATE_FILE
     messages = load_template_messages(template_file)
     template = Environment(loader=FileSystemLoader(THIS_DIR), trim_blocks=True) \
         .get_template(template_file)
