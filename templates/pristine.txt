@@ -5,9 +5,8 @@
 [{{ month }}/{{ year }}]
 
 {% for day in month_group %}
-{{day.day_no}}.
 {% for period in day.periods %}
-  {{period.range_str}} => {{period.minutes}} min
+{% if loop.index == 1 %}{{day.day_no}}. {% else %}    {% endif %}{{period.range_str}} => {{period.minutes}} min
 {% endfor %}
 {% endfor %}
 {% endfor %}
