@@ -5,6 +5,7 @@
 
 ## features
 
+* filter output by text or period
 * extendable output formats with jinja2 templates
 * optional multi language support
 * VCS friendly format
