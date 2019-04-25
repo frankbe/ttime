@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
-import os, sys, re, locale, datetime, calendar, configparser # noqa
+from typing import List, Callable, Any
+from configparser import ConfigParser
+import os, sys, re, locale, datetime, calendar # noqa
 from jinja2 import Environment, FileSystemLoader
+import argparse
 
 # set language to system default language (for weekday display)
 locale.resetlocale()
@@ -33,7 +36,7 @@ class WorkPeriod:
             self.end_hour, self.end_minute)
 
     def __repr__(self):
-        return "Period({})".format(this.range_str)
+        return "Period({})".format(self.range_str)
 
 
 class WorkWeek:
@@ -75,7 +78,9 @@ class WorkDay:
         return self.date == other.date
 
     def __repr__(self):
-        return str(self.date) + (", ".join(self.periods))
+        return "WorkDay({}, {})".format(
+                str(self.date), 
+                (", ".join([str(p) for p in self.periods])))
 
 
 def filter_workdays(workdays, day_filters=[], period_filters=[]):
@@ -99,7 +104,7 @@ def get_language():
 
 def load_template_messages(template_filename):
     template_msg_file = os.path.join(THIS_DIR, template_filename + '.config')
-    config = configparser.ConfigParser()
+    config = ConfigParser()
     config.read(template_msg_file)
     lang = get_language()
     d = dict(config[lang]) if config.has_section(lang) else {}
@@ -107,7 +112,7 @@ def load_template_messages(template_filename):
     return MsgStruct(**d) if d else None
 
 
-def read_workdays(config_parser):
+def read_workdays(config_parser: ConfigParser) -> List[WorkDay]:
     month_year_pattern = r'^(\d\d)/(\d\d\d\d)$'
     period_pattern = r'^(\d\d\d\d)-(\d\d\d\d)\s*(.*)$'
     bad_format_err = Exception('bad format!')
@@ -135,8 +140,7 @@ def read_workdays(config_parser):
     return items
 
 
-def _get_args():
-    import argparse
+def _get_args() -> argparse.Namespace:
     from datetime import datetime
 
     def valid_date(s):
@@ -156,7 +160,7 @@ def _get_args():
     return parser.parse_args()
 
 
-def _get_day_filters(args):
+def _get_day_filters(args: argparse.Namespace) -> List[Callable[[str], bool]]:
     filters = []
     if args.startdate:
         filters.append(lambda day: day.date >= args.startdate)
@@ -167,15 +171,16 @@ def _get_day_filters(args):
     return filters
 
 
-def _get_period_filters(args):
+def _get_period_filters(args: argparse.Namespace) -> List[Callable[[str], bool]]:
     filters = []
     if args.text:
         filters.append(lambda period: args.text in period.description)
     return filters
 
 
-def _get_workfile_parser(files):
-    parser = configparser.ConfigParser(delimiters=['.'], strict=False)
+def _get_workfile_parser(files: List) -> ConfigParser:
+    #print(type(files[0]))
+    parser = ConfigParser(delimiters=['.'], strict=False)
     text = "".join(["".join(line for line in file) for file in files])
     # TODO improve
     fallback_section = '[01/0001]'
