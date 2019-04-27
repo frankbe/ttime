@@ -1,5 +1,5 @@
-#!/usr/bin/env python3
-from typing import List, Callable, Any
+    #!/usr/bin/env python3
+from typing import List, Callable
 from configparser import ConfigParser
 import os, sys, re, locale, datetime, calendar # noqa
 from jinja2 import Environment, FileSystemLoader
@@ -11,7 +11,6 @@ locale.resetlocale()
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 WEEK_DAY_NAMES = list(calendar.day_abbr)
 TEMPLATE_DIR = 'templates'
-DEFAULT_TEMPLATE_FILE = 'week_report.txt'
 
 
 class MsgStruct:
@@ -79,11 +78,11 @@ class WorkDay:
 
     def __repr__(self):
         return "WorkDay({}, {})".format(
-                str(self.date), 
+                str(self.date),
                 (", ".join([str(p) for p in self.periods])))
 
 
-def filter_workdays(workdays, day_filters=[], period_filters=[]):
+def filter_workdays(workdays: List[WorkDay], day_filters=[], period_filters=[]) -> List[WorkDay]:
     if not (day_filters or period_filters):
         return workdays
     results = []
@@ -95,20 +94,18 @@ def filter_workdays(workdays, day_filters=[], period_filters=[]):
     return results
 
 
-def get_language():
+def detect_language(fallback: str = 'en') -> str:
     try:
         return locale.getdefaultlocale()[0][:2]
-    except ValueError or IndexError:
-        return 'en'
+    except ValueError | IndexError:
+        return fallback
 
 
-def load_template_messages(template_filename):
-    template_msg_file = os.path.join(THIS_DIR, template_filename + '.config')
+def load_template_messages(messages_filename: str, language_code: str) -> MsgStruct:
+    template_msg_file = os.path.join(THIS_DIR, messages_filename)
     config = ConfigParser()
     config.read(template_msg_file)
-    lang = get_language()
-    d = dict(config[lang]) if config.has_section(lang) else {}
-    # d = {s:dict(config.items(s)) for s in config.sections()}
+    d = dict(config[language_code]) if config.has_section(language_code) else {}
     return MsgStruct(**d) if d else None
 
 
@@ -140,10 +137,10 @@ def read_workdays(config_parser: ConfigParser) -> List[WorkDay]:
     return items
 
 
-def _get_args() -> argparse.Namespace:
+def parse_args() -> argparse.Namespace:
     from datetime import datetime
 
-    def valid_date(s):
+    def validate_date(s):
         try:
             return datetime.strptime(s, "%Y-%m-%d").date()
         except ValueError:
@@ -151,16 +148,23 @@ def _get_args() -> argparse.Namespace:
             raise argparse.ArgumentTypeError(msg)
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('workfile', nargs='+', type=argparse.FileType('r'))
-    parser.add_argument('-f', '--format', help='use specific output format template file', type=argparse.FileType('r'))
-    parser.add_argument('-t', '--text', help='filter work period by text')
-    parser.add_argument("-s", "--startdate", help="start date - format YYYY-MM-DD", type=valid_date)
-    parser.add_argument("-e", "--enddate", help="end date - format YYYY-MM-DD", type=valid_date)
-    parser.add_argument("-d", "--date", help="date - format YYYY-MM-DD", type=valid_date)
+    parser.add_argument(
+        'workfile', nargs='+', type=argparse.FileType('r'))
+    parser.add_argument(
+        '-f', '--format', type=argparse.FileType('r'),
+        help='use specific output format template file')
+    parser.add_argument(
+        '-t', '--text', help='filter work period by text')
+    parser.add_argument(
+        "-s", "--startdate", type=validate_date, help="start date - format YYYY-MM-DD")
+    parser.add_argument(
+        "-e", "--enddate", type=validate_date, help="end date - format YYYY-MM-DD")
+    parser.add_argument(
+        "-d", "--date", type=validate_date, help="date - format YYYY-MM-DD")
     return parser.parse_args()
 
 
-def _get_day_filters(args: argparse.Namespace) -> List[Callable[[str], bool]]:
+def day_filters(args: argparse.Namespace) -> List[Callable[[str], bool]]:
     filters = []
     if args.startdate:
         filters.append(lambda day: day.date >= args.startdate)
@@ -171,15 +175,14 @@ def _get_day_filters(args: argparse.Namespace) -> List[Callable[[str], bool]]:
     return filters
 
 
-def _get_period_filters(args: argparse.Namespace) -> List[Callable[[str], bool]]:
+def period_filters(args: argparse.Namespace) -> List[Callable[[str], bool]]:
     filters = []
     if args.text:
         filters.append(lambda period: args.text in period.description)
     return filters
 
 
-def _get_workfile_parser(files: List) -> ConfigParser:
-    #print(type(files[0]))
+def workfile_parser(files: List) -> ConfigParser:
     parser = ConfigParser(delimiters=['.'], strict=False)
     text = "".join(["".join(line for line in file) for file in files])
     # TODO improve
@@ -188,22 +191,26 @@ def _get_workfile_parser(files: List) -> ConfigParser:
     return parser
 
 
-def main():
-    args = _get_args()
-    workfile_parser = _get_workfile_parser(args.workfile)
-    unfiltered_items = read_workdays(workfile_parser)
-    items = filter_workdays(
-        unfiltered_items, 
-        day_filters = _get_day_filters(args),
-        period_filters = _get_period_filters(args))
-    total_hours = sum([x.hours for x in items])
-    template_file = args.format.name if args.format else TEMPLATE_DIR + "/" + DEFAULT_TEMPLATE_FILE
-    messages = load_template_messages(template_file)
+def render_template(workdays: List[WorkDay], file_name: str, messages: MsgStruct) -> str:
+    print(file_name, THIS_DIR)
     template = Environment(loader=FileSystemLoader(THIS_DIR), trim_blocks=True) \
-        .get_template(template_file)
-    print(template.render(
-        items=items, total_hours=total_hours,
-        total_days=total_hours / 8, msg=messages))
+        .get_template(file_name)
+    total_hours = sum([x.hours for x in workdays])
+    return template.render(
+        items=workdays,
+        total_hours=total_hours,
+        total_days=total_hours / 8,
+        msg=messages)
+
+
+def main():
+    args = parse_args()
+    template_file = args.format.name if args.format else TEMPLATE_DIR + "/" + 'week_report.txt'
+    messages = load_template_messages(template_file + '.config', detect_language())
+    recorded_workdays = read_workdays(workfile_parser(args.workfile))
+    report_workdays = filter_workdays(recorded_workdays, day_filters(args), period_filters(args))
+    output_text = render_template(report_workdays, template_file, messages)
+    print(output_text)
 
 
 if __name__ == "__main__":
