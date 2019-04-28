@@ -1,16 +1,16 @@
-    #!/usr/bin/env python3
+#!/usr/bin/env python3
+
+import argparse
+import os, sys, re, locale, datetime, calendar # noqa
 from typing import List, Callable
 from configparser import ConfigParser
-import os, sys, re, locale, datetime, calendar # noqa
 from jinja2 import Environment, FileSystemLoader
-import argparse
 
 # set language to system default language (for weekday display)
 locale.resetlocale()
 
-THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+TEMPLATE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
 WEEK_DAY_NAMES = list(calendar.day_abbr)
-TEMPLATE_DIR = 'templates'
 
 
 class MsgStruct:
@@ -101,14 +101,6 @@ def detect_language(fallback: str = 'en') -> str:
         return fallback
 
 
-def load_template_messages(messages_filename: str, language_code: str) -> MsgStruct:
-    template_msg_file = os.path.join(THIS_DIR, messages_filename)
-    config = ConfigParser()
-    config.read(template_msg_file)
-    d = dict(config[language_code]) if config.has_section(language_code) else {}
-    return MsgStruct(**d) if d else None
-
-
 def read_workdays(config_parser: ConfigParser) -> List[WorkDay]:
     month_year_pattern = r'^(\d\d)/(\d\d\d\d)$'
     period_pattern = r'^(\d\d\d\d)-(\d\d\d\d)\s*(.*)$'
@@ -151,8 +143,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         'workfile', nargs='+', type=argparse.FileType('r'))
     parser.add_argument(
-        '-f', '--format', type=argparse.FileType('r'),
-        help='use specific output format template file')
+        '-o', '--outfmt', help='use specific output format template file')
     parser.add_argument(
         '-t', '--text', help='filter work period by text')
     parser.add_argument(
@@ -191,10 +182,17 @@ def workfile_parser(files: List) -> ConfigParser:
     return parser
 
 
-def render_template(workdays: List[WorkDay], file_name: str, messages: MsgStruct) -> str:
-    print(file_name, THIS_DIR)
-    template = Environment(loader=FileSystemLoader(THIS_DIR), trim_blocks=True) \
-        .get_template(file_name)
+def load_template_messages(messages_filename: str, language_code: str) -> MsgStruct:
+    template_msg_file = os.path.join(TEMPLATE_DIR, messages_filename)
+    config = ConfigParser()
+    config.read(template_msg_file)
+    d = dict(config[language_code]) if config.has_section(language_code) else {}
+    return MsgStruct(**d) if d else None
+
+
+def render_template(workdays: List[WorkDay], template_name: str, messages: MsgStruct) -> str:
+    template = Environment(loader=FileSystemLoader(TEMPLATE_DIR), trim_blocks=True) \
+        .get_template(template_name + '.j2')
     total_hours = sum([x.hours for x in workdays])
     return template.render(
         items=workdays,
@@ -205,11 +203,11 @@ def render_template(workdays: List[WorkDay], file_name: str, messages: MsgStruct
 
 def main():
     args = parse_args()
-    template_file = args.format.name if args.format else TEMPLATE_DIR + "/" + 'week_report.txt'
-    messages = load_template_messages(template_file + '.config', detect_language())
+    template_name = args.outfmt if args.outfmt else 'week_report'
+    messages = load_template_messages(template_name + '.config', detect_language())
     recorded_workdays = read_workdays(workfile_parser(args.workfile))
     report_workdays = filter_workdays(recorded_workdays, day_filters(args), period_filters(args))
-    output_text = render_template(report_workdays, template_file, messages)
+    output_text = render_template(report_workdays, template_name, messages)
     print(output_text)
 
 
