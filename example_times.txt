@@ -1,11 +1,13 @@
+# (you can make some comments here)
 # project ttime 
 # budget: 3 days
 # ...
 
 
-[10/2016]
+[12/2016]
 
-15. 0700-1200 konzept
+15. 0700-1200 make a concept
+
 
 [01/2017]
 
